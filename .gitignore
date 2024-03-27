@@ -485,3 +485,5 @@ $RECYCLE.BIN/
 
 #Development Database
 API/mediporta.db
+API/mediporta.db-shm
+API/mediporta.db-wal
