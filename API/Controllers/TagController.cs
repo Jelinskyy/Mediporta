@@ -3,6 +3,7 @@ using API.Data;
 using API.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 
 namespace API.Controllers;
@@ -13,16 +14,20 @@ public class TagController : ControllerBase
 {
     private readonly DataContext _context;
     private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cashe;
+    private readonly string allTagsCasheKey = "AllTags";
 
-    public TagController(DataContext context)
+    public TagController(DataContext context, IMemoryCache cashe)
     {
         _context = context;
         _httpClient = new HttpClient(new HttpClientHandler
             { 
                 AutomaticDecompression = DecompressionMethods.GZip
             });
+        _cashe = cashe;
     }
 
+    // partial class for reciving Stack Overflow api response
     public partial class SOApiRespons{
         [JsonProperty("items")]
         public List<Tag>? tags { get; set; }
@@ -37,23 +42,34 @@ public class TagController : ControllerBase
     public async Task<ActionResult<IEnumerable<TagDto>>> GetTags()
     {
         // Check if there are tags in db
-        if(_context.Tags.Count() <= 0) {
-            await FetchTags();
-        }
 
-        // ActionResult<IEnumerable<Tag>> tags = await _context.Tags.ToListAsync();
+        if(!_cashe.TryGetValue("AllTags", out List<TagDto> tags))
+        {
+            if(_context.Tags.Count() <= 0) {
+                await FetchTags();
+            }
 
-        var query = from t in _context.Tags
+            var query = from t in _context.Tags
             select new TagDto{
                 Name = t.Name,
                 HasSynonyms = t.HasSynonyms,
                 IsMadatorOnly = t.IsMadatorOnly,
                 IsRequired = t.IsRequired,
                 Count = t.Count,
-                Percent = Math.Round((double)t.Count / _context.Tags.Sum(t => t.Count) * 100, 2)
+                Percent = Math.Round((double)t.Count / _context.Tags.Sum(t => (long)t.Count) * 100, 2)
             };
-        
-        return Ok(query.ToList());
+
+            tags = await query.ToListAsync();
+
+            MemoryCacheEntryOptions casheEntryOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromSeconds(45))
+                .SetAbsoluteExpiration(TimeSpan.FromSeconds(300));
+                
+            
+            _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
+        }
+
+        return Ok(tags);
     }
 
     [HttpGet("fetch")]
@@ -95,6 +111,8 @@ public class TagController : ControllerBase
         _context.Tags.RemoveRange(_context.Tags);
         _context.Tags.AddRange(tags);
         await _context.SaveChangesAsync();
+
+        _cashe.Remove(allTagsCasheKey);
         
         return RedirectToAction("GetTag", "Tag");
     }
