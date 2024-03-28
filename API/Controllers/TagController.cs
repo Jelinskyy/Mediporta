@@ -14,6 +14,15 @@ public class TagController : ControllerBase
     private readonly DataContext _context;
     private readonly HttpClient _httpClient;
 
+    public TagController(DataContext context)
+    {
+        _context = context;
+        _httpClient = new HttpClient(new HttpClientHandler
+            { 
+                AutomaticDecompression = DecompressionMethods.GZip
+            });
+    }
+
     public partial class SOApiRespons{
         [JsonProperty("items")]
         public List<Tag>? tags { get; set; }
@@ -25,26 +34,27 @@ public class TagController : ControllerBase
         public int quotaRemaining {get; set; }
     }
 
-    public TagController(DataContext context)
-    {
-        _context = context;
-        _httpClient = new HttpClient(new HttpClientHandler
-            { 
-                AutomaticDecompression = DecompressionMethods.GZip
-            });
-    }
-
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Tag>>> GetTags()
+    public async Task<ActionResult> GetTags()
     {
         // Check if there are tags in db
         if(_context.Tags.Count() <= 0) {
             await FetchTags();
         }
 
-        ActionResult<IEnumerable<Tag>> tags = await _context.Tags.ToListAsync();
+        // ActionResult<IEnumerable<Tag>> tags = await _context.Tags.ToListAsync();
+
+        var query = from t in _context.Tags
+            select new {
+                Name = t.Name,
+                HasSynonyms = t.HasSynonyms,
+                IsMadatorOnly = t.IsMadatorOnly,
+                IsRequired = t.IsRequired,
+                Count = t.Count,
+                Percent = Math.Round((double)t.Count / _context.Tags.Sum(t => t.Count) * 100, 2)
+            };
         
-        return tags;
+        return Ok(query.ToList());
     }
 
     [HttpGet("fetch")]
@@ -87,6 +97,6 @@ public class TagController : ControllerBase
         _context.Tags.AddRange(tags);
         await _context.SaveChangesAsync();
         
-        return RedirectToAction("GetTags", "Tag");
+        return RedirectToAction("GetTag", "Tag");
     }
 }
