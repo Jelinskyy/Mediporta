@@ -13,31 +13,6 @@ public class TagController : ControllerBase
 {
     private readonly DataContext _context;
     private readonly HttpClient _httpClient;
-    public TagController(DataContext context)
-    {
-        _context = context;
-        _httpClient = new HttpClient(new HttpClientHandler
-            { 
-                AutomaticDecompression = DecompressionMethods.GZip
-            });
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Tag>>> GetTags()
-    {
-        ActionResult<IEnumerable<Tag>> tags;
-
-        // Check if there are tags in db
-        if(_context.Tags.Count() <= 0) {
-            // if no do fetch request
-            tags = await FetchTags();
-        }else {
-            // if yes get them from db
-            tags = await _context.Tags.ToListAsync();
-        }
-        
-        return tags;
-    }
 
     public partial class SOApiRespons{
         [JsonProperty("items")]
@@ -50,8 +25,30 @@ public class TagController : ControllerBase
         public int quotaRemaining {get; set; }
     }
 
+    public TagController(DataContext context)
+    {
+        _context = context;
+        _httpClient = new HttpClient(new HttpClientHandler
+            { 
+                AutomaticDecompression = DecompressionMethods.GZip
+            });
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Tag>>> GetTags()
+    {
+        // Check if there are tags in db
+        if(_context.Tags.Count() <= 0) {
+            await FetchTags();
+        }
+
+        ActionResult<IEnumerable<Tag>> tags = await _context.Tags.ToListAsync();
+        
+        return tags;
+    }
+
     [HttpGet("fetch")]
-    public async Task<ActionResult<IEnumerable<Tag>>> FetchTags()
+    public async Task<ActionResult> FetchTags()
     {
         string apiUrl = "https://api.stackexchange.com/2.3/tags?order=desc&sort=popular&site=stackoverflow&pagesize=100"; 
 
@@ -60,10 +57,11 @@ public class TagController : ControllerBase
 
         //all tags list
         List<Tag> tags = new List<Tag>();
+        HttpResponseMessage response;
 
         do{
             // Send request to api
-            HttpResponseMessage response = await _httpClient.GetAsync(apiUrl+"&page="+pageNumber);
+            response = await _httpClient.GetAsync(apiUrl+"&pageee="+pageNumber);
             if (!response.IsSuccessStatusCode){
                 // Handle the error condition
                 return StatusCode((int)response.StatusCode);
@@ -85,9 +83,10 @@ public class TagController : ControllerBase
             pageNumber++;
         }while (tags.Count < 100);
 
-        await _context.Tags.AddRangeAsync(tags);
+        _context.Tags.RemoveRange(_context.Tags);
+        _context.Tags.AddRange(tags);
         await _context.SaveChangesAsync();
         
-        return Ok(tags);
+        return RedirectToAction("GetTags", "Tag");
     }
 }
