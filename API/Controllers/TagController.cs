@@ -33,9 +33,8 @@ public class TagController : ControllerBase
         [JsonProperty("quota_remaining")]
         public int quotaRemaining {get; set; }
     }
-
     [HttpGet]
-    public async Task<ActionResult> GetTags()
+    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags()
     {
         // Check if there are tags in db
         if(_context.Tags.Count() <= 0) {
@@ -45,7 +44,7 @@ public class TagController : ControllerBase
         // ActionResult<IEnumerable<Tag>> tags = await _context.Tags.ToListAsync();
 
         var query = from t in _context.Tags
-            select new {
+            select new TagDto{
                 Name = t.Name,
                 HasSynonyms = t.HasSynonyms,
                 IsMadatorOnly = t.IsMadatorOnly,
