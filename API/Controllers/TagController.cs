@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Runtime.ConstrainedExecution;
 using API.Data;
+using API.Dtos;
 using API.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,19 +28,8 @@ public class TagController : ControllerBase
         _cashe = cashe;
     }
 
-    // partial class for reciving Stack Overflow api response
-    public partial class SOApiRespons{
-        [JsonProperty("items")]
-        public List<Tag>? tags { get; set; }
-        [JsonProperty("has_more")]
-        public bool hasMore {get; set; }
-        [JsonProperty("quota_max")]
-        public int quotaMax {get; set; }
-        [JsonProperty("quota_remaining")]
-        public int quotaRemaining {get; set; }
-    }
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags(string order = "asc", string sort = "Name")
+    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags(string order = "asc", string sort = "name")
     {
         sort = sort.ToLower();
         order = order.ToLower();
@@ -63,7 +52,7 @@ public class TagController : ControllerBase
                     IsMadatorOnly = t.IsMadatorOnly,
                     IsRequired = t.IsRequired,
                     Count = t.Count,
-                    Percent = Math.Round((double)t.Count / sumOfTags * 100, 2)
+                    Percent = Math.Round((double)t.Count / sumOfTags * 100, 3)
                 };
 
             // Executeing query
@@ -102,7 +91,7 @@ public class TagController : ControllerBase
 
         do{
             // Send request to api
-            response = await _httpClient.GetAsync(apiUrl+"&pageee="+pageNumber);
+            response = await _httpClient.GetAsync(apiUrl+"&page="+pageNumber);
             if (!response.IsSuccessStatusCode){
                 // Handle the error condition
                 return StatusCode((int)response.StatusCode);
@@ -110,7 +99,7 @@ public class TagController : ControllerBase
 
             // Deserializing data
             var data = await response.Content.ReadAsStringAsync();
-            var deserialized = JsonConvert.DeserializeObject<SOApiRespons>(data);
+            var deserialized = JsonConvert.DeserializeObject<SoApiResponseDto>(data);
 
             // Adding data to table
             tags.AddRange(deserialized.tags);
