@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.ConstrainedExecution;
 using API.Data;
 using API.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -39,25 +40,31 @@ public class TagController : ControllerBase
         public int quotaRemaining {get; set; }
     }
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags()
+    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags(string order = "asc", string sort = "Name")
     {
-        // Check if there are tags in db
+        sort = sort.ToLower();
+        order = order.ToLower();
 
-        if(!_cashe.TryGetValue("AllTags", out List<TagDto> tags))
+        if(!_cashe.TryGetValue(allTagsCasheKey, out IEnumerable<TagDto> tags))
         {
+            // Check if there are tags in db
             if(_context.Tags.Count() <= 0) {
                 await FetchTags();
             }
 
+
+            // Prepare Query
+            long sumOfTags = _context.Tags.Sum(t => (long)t.Count);
+
             var query = from t in _context.Tags
-            select new TagDto{
-                Name = t.Name,
-                HasSynonyms = t.HasSynonyms,
-                IsMadatorOnly = t.IsMadatorOnly,
-                IsRequired = t.IsRequired,
-                Count = t.Count,
-                Percent = Math.Round((double)t.Count / _context.Tags.Sum(t => (long)t.Count) * 100, 2)
-            };
+                select new TagDto{
+                    Name = t.Name,
+                    HasSynonyms = t.HasSynonyms,
+                    IsMadatorOnly = t.IsMadatorOnly,
+                    IsRequired = t.IsRequired,
+                    Count = t.Count,
+                    Percent = Math.Round((double)t.Count / sumOfTags * 100, 2)
+                };
 
             tags = await query.ToListAsync();
 
@@ -69,13 +76,21 @@ public class TagController : ControllerBase
             _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
         }
 
+        // Order query
+        tags = sort switch
+        {
+            "name" => order=="desc" ? tags.OrderByDescending(t => t.Name) : tags.OrderBy(t => t.Name),
+            "percent" => order=="desc" ? tags.OrderByDescending(t => t.Percent) : tags.OrderBy(t => t.Percent),
+            _ => tags
+        };
+
         return Ok(tags);
     }
 
     [HttpGet("fetch")]
     public async Task<ActionResult> FetchTags()
     {
-        string apiUrl = "https://api.stackexchange.com/2.3/tags?order=desc&sort=popular&site=stackoverflow&pagesize=100"; 
+        string apiUrl = "https://api.stackexchange.com/2.3/tags?site=stackoverflow&pagesize=100"; 
 
         //page number
         int pageNumber = 1;
@@ -109,11 +124,11 @@ public class TagController : ControllerBase
         }while (tags.Count < 100);
 
         _context.Tags.RemoveRange(_context.Tags);
-        _context.Tags.AddRange(tags);
+        await _context.Tags.AddRangeAsync(tags);
         await _context.SaveChangesAsync();
 
         _cashe.Remove(allTagsCasheKey);
         
-        return RedirectToAction("GetTag", "Tag");
+        return Ok("Data fetched from "+apiUrl);
     }
 }
