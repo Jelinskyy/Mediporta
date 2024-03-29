@@ -1,8 +1,11 @@
 ﻿namespace API.Dtos;
 
+/// <summary>
+/// Data tranfer object representing SoApiTag
+/// </summary>
 public class TagDto
 {
-    public string? Name { get ; set; }
+    public string Name { get ; set; }
     public bool HasSynonyms { get; set; }
     public bool IsMadatorOnly { get; set; }
     public bool IsRequired { get; set; }

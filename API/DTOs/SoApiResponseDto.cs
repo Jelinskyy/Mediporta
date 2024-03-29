@@ -6,7 +6,7 @@ namespace API.Dtos;
 public class SoApiResponseDto
 {
     [JsonProperty("items")]
-    public List<Tag>? tags { get; set; }
+    public List<Tag> tags { get; set; }
     [JsonProperty("has_more")]
     public bool hasMore {get; set; }
     [JsonProperty("quota_max")]

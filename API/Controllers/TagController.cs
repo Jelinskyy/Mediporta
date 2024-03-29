@@ -28,8 +28,17 @@ public class TagController : ControllerBase
         _cashe = cashe;
     }
 
+    /// <summary>
+    /// Returns list of all SO Tags stored in DB
+    /// </summary>
+    /// <param name="order">
+    /// Sorting order
+    /// </param>
+    /// <param name="sort">
+    /// Field by witch tags will be sorted
+    /// </param>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TagDto>>> GetTags(string order = "asc", string sort = "name")
+    public async Task<IEnumerable<TagDto>>GetTags(string order = "asc", string sort = "name")
     {
         sort = sort.ToLower();
         order = order.ToLower();
@@ -74,9 +83,12 @@ public class TagController : ControllerBase
             _ => tags
         };
 
-        return Ok(tags);
+        return tags;
     }
 
+    /// <summary>
+    /// Forcing server to fetch data from SO API and store to DB
+    /// </summary>
     [HttpGet("fetch")]
     public async Task<ActionResult> FetchTags()
     {
