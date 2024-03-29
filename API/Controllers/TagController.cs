@@ -2,6 +2,7 @@
 using API.Data;
 using API.Dtos;
 using API.Entities;
+using API.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -31,18 +32,9 @@ public class TagController : ControllerBase
     /// <summary>
     /// Returns list of all SO Tags stored in DB
     /// </summary>
-    /// <param name="order">
-    /// Sorting order
-    /// </param>
-    /// <param name="sort">
-    /// Field by witch tags will be sorted
-    /// </param>
     [HttpGet]
-    public async Task<IEnumerable<TagDto>>GetTags(string order = "asc", string sort = "name")
+    public async Task<IEnumerable<TagDto>>GetTags([FromQuery]GetTagsParams sortParams)
     {
-        sort = sort.ToLower();
-        order = order.ToLower();
-
         if(!_cashe.TryGetValue(allTagsCasheKey, out IEnumerable<TagDto> tags))
         {
             // Checking if there are tags in db
@@ -76,10 +68,10 @@ public class TagController : ControllerBase
         }
 
         // Order tags
-        tags = sort switch
+        tags = sortParams.sort switch
         {
-            "name" => order=="desc" ? tags.OrderByDescending(t => t.Name) : tags.OrderBy(t => t.Name),
-            "percent" => order=="desc" ? tags.OrderByDescending(t => t.Percent) : tags.OrderBy(t => t.Percent),
+            SortEnum.name => sortParams.order==OrderEnum.desc ? tags.OrderByDescending(t => t.Name) : tags.OrderBy(t => t.Name),
+            SortEnum.percent => sortParams.order==OrderEnum.desc ? tags.OrderByDescending(t => t.Percent) : tags.OrderBy(t => t.Percent),
             _ => tags
         };
 

@@ -1,7 +1,7 @@
 ﻿namespace API.Dtos;
 
 /// <summary>
-/// Data tranfer object representing SoApiTag
+/// Data tranfer object representing SO API Tag
 /// </summary>
 public class TagDto
 {
