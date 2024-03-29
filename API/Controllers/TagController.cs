@@ -47,13 +47,13 @@ public class TagController : ControllerBase
 
         if(!_cashe.TryGetValue(allTagsCasheKey, out IEnumerable<TagDto> tags))
         {
-            // Check if there are tags in db
+            // Checking if there are tags in db
             if(_context.Tags.Count() <= 0) {
                 await FetchTags();
             }
 
 
-            // Prepare Query
+            // Prepareing Query
             long sumOfTags = _context.Tags.Sum(t => (long)t.Count);
 
             var query = from t in _context.Tags
@@ -66,17 +66,18 @@ public class TagController : ControllerBase
                     Percent = Math.Round((double)t.Count / sumOfTags * 100, 2)
                 };
 
+            // Executeing query
             tags = await query.ToListAsync();
 
+            // Updating Cashe
             MemoryCacheEntryOptions casheEntryOptions = new MemoryCacheEntryOptions()
                 .SetSlidingExpiration(TimeSpan.FromSeconds(45))
                 .SetAbsoluteExpiration(TimeSpan.FromSeconds(300));
                 
-            
             _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
         }
 
-        // Order query
+        // Order tags
         tags = sort switch
         {
             "name" => order=="desc" ? tags.OrderByDescending(t => t.Name) : tags.OrderBy(t => t.Name),
@@ -121,9 +122,12 @@ public class TagController : ControllerBase
             }
 
             pageNumber++;
-        }while (tags.Count < 100);
+        }while (tags.Count < 1000);
 
+        //clearing database
         _context.Tags.RemoveRange(_context.Tags);
+
+        //Inserting new tags to database
         await _context.Tags.AddRangeAsync(tags);
         await _context.SaveChangesAsync();
 
