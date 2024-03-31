@@ -4,6 +4,7 @@ using API.Dtos;
 using API.Entities;
 using API.Helpers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
@@ -33,13 +34,17 @@ public class TagController : ControllerBase
     /// Returns list of all SO Tags stored in DB
     /// </summary>
     [HttpGet]
-    public async Task<IEnumerable<TagDto>>GetTags([FromQuery]GetTagsParams sortParams)
+    public async Task<ActionResult<IEnumerable<TagDto>>>GetTags([FromQuery]GetTagsParams sortParams)
     {
         if(!_cashe.TryGetValue(allTagsCasheKey, out IEnumerable<TagDto> tags))
         {
             // Checking if there are tags in db
             if(_context.Tags.Count() <= 0) {
-                await FetchTags();
+                ActionResult response = await FetchTags();
+                var responseStatusCode= response as IStatusCodeActionResult;
+                if(responseStatusCode.StatusCode != 200){
+                    return response;
+                }
             }
 
 
@@ -75,7 +80,7 @@ public class TagController : ControllerBase
             _ => tags
         };
 
-        return tags;
+        return Ok(tags);
     }
 
     /// <summary>
