@@ -12,9 +12,6 @@ builder.Services.AddControllers()
             options.SerializerSettings.Converters.Add(new StringEnumConverter());  
         }); 
 
-
-builder.Services.AddMemoryCache();
-
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -31,9 +28,13 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 }).AddSwaggerGenNewtonsoftSupport(); 
 
+// Add DB Context
 builder.Services.AddDbContext<DataContext>(opt =>{
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+// Add Cashe Memory
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
