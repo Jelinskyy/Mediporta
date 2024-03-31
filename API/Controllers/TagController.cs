@@ -47,29 +47,35 @@ public class TagController : ControllerBase
                 }
             }
 
+            try
+            {
+                // Prepareing Query
+                long sumOfTags = _context.Tags.Sum(t => (long)t.Count);
 
-            // Prepareing Query
-            long sumOfTags = _context.Tags.Sum(t => (long)t.Count);
+                var query = from t in _context.Tags
+                    select new TagDto{
+                        Name = t.Name,
+                        HasSynonyms = t.HasSynonyms,
+                        IsMadatorOnly = t.IsMadatorOnly,
+                        IsRequired = t.IsRequired,
+                        Count = t.Count,
+                        Percent = Math.Round((double)t.Count / sumOfTags * 100, 3)
+                    };
 
-            var query = from t in _context.Tags
-                select new TagDto{
-                    Name = t.Name,
-                    HasSynonyms = t.HasSynonyms,
-                    IsMadatorOnly = t.IsMadatorOnly,
-                    IsRequired = t.IsRequired,
-                    Count = t.Count,
-                    Percent = Math.Round((double)t.Count / sumOfTags * 100, 3)
-                };
+                // Executeing query
+                tags = await query.ToListAsync();
 
-            // Executeing query
-            tags = await query.ToListAsync();
-
-            // Updating Cashe
-            MemoryCacheEntryOptions casheEntryOptions = new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromSeconds(45))
-                .SetAbsoluteExpiration(TimeSpan.FromSeconds(300));
-                
-            _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
+                // Updating Cashe
+                MemoryCacheEntryOptions casheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromSeconds(45))
+                    .SetAbsoluteExpiration(TimeSpan.FromSeconds(300));
+                    
+                _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
+            }
+            catch
+            {
+                return Problem("Database Connection failed");
+            }
         }
 
         // Order tags
@@ -103,7 +109,7 @@ public class TagController : ControllerBase
             response = await _httpClient.GetAsync(apiUrl+"&page="+pageNumber);
             if (!response.IsSuccessStatusCode){
                 // Handle the error condition
-                return StatusCode((int)response.StatusCode);
+                return Problem("StackOwerflow Connection failed");
             }
 
             // Deserializing data
@@ -122,12 +128,19 @@ public class TagController : ControllerBase
             pageNumber++;
         }while (tags.Count < 1000);
 
-        //clearing database
-        _context.Tags.RemoveRange(_context.Tags);
+        try
+        {
+            //clearing database
+            _context.Tags.RemoveRange(_context.Tags);
 
-        //Inserting new tags to database
-        await _context.Tags.AddRangeAsync(tags);
-        await _context.SaveChangesAsync();
+            //Inserting new tags to database
+            await _context.Tags.AddRangeAsync(tags);
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            return Problem("Database Connection failed");
+        }
 
         _cashe.Remove(allTagsCasheKey);
         
