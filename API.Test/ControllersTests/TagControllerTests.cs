@@ -1,8 +1,6 @@
-﻿using System.Linq.Expressions;
-using API.Controllers;
+﻿using API.Controllers;
 using API.Data;
 using API.Dtos;
-using API.Entities;
 using API.Helpers;
 using API.Tests;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Moq.EntityFrameworkCore;
 
 
 namespace API.Test;
@@ -18,6 +15,21 @@ namespace API.Test;
 public class TagControllerTests
 {
     public readonly DataContext _dataContext;
+    public readonly Mock<HttpClient> _client;
+
+    public class MockHttpHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request,
+                CancellationToken cancellationToken
+            )
+            {
+                return Task.FromResult(new HttpResponseMessage
+                {
+                    Content = new StringContent(TestDataHelper.GetFakeSOApiRespone()),
+                });
+            }
+        }
 
     public TagControllerTests()
     {
@@ -25,16 +37,19 @@ public class TagControllerTests
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options;
         _dataContext = new (options);
+
+        _client = new(new MockHttpHandler());
     }
 
     [Fact]
     public async Task GetTags_SortingAcsByName_WithoutCashedValue()
     {
-        var memoryCache = Mock.Of<IMemoryCache>();
-        var memoryCasheMock = Mock.Get(memoryCache);
         //Arrange
         await _dataContext.AddRangeAsync(TestDataHelper.GetFakeTagList());
         await _dataContext.SaveChangesAsync();
+
+        var memoryCache = Mock.Of<IMemoryCache>();
+        var memoryCasheMock = Mock.Get(memoryCache);
 
         object? expected;
         memoryCasheMock.Setup(x => x.TryGetValue(It.IsAny<string>(), out expected))
@@ -45,7 +60,7 @@ public class TagControllerTests
             .Returns(casheEntry);
 
         //Act
-        TagController tagController = new(_dataContext, memoryCasheMock.Object);
+        TagController tagController = new(_dataContext, memoryCasheMock.Object, httpClient: _client.Object);
         var result = (await tagController.GetTags(new GetTagsParams())).Result as OkObjectResult;
         
         //Assert
@@ -86,7 +101,7 @@ public class TagControllerTests
         memoryCache.Set(casheKey, TestDataHelper.GetFakeTagDtoList(), casheEntryOptions);
 
         //Act
-        TagController tagController = new(_dataContext, memoryCache, casheKey);
+        TagController tagController = new(_dataContext, memoryCache, casheKey, httpClient: _client.Object);
         var result = (await tagController.GetTags(getParams)).Result as OkObjectResult;
         
         //Assert
@@ -104,15 +119,48 @@ public class TagControllerTests
         Assert.Empty(await _dataContext.Tags.ToListAsync());
     }
 
-    // [Fact]
-    // public void GetTags_CallingFetchWhenDbIsEmpty()
-    // {
+    [Fact]
+    public async Task FetchTags_StoringRequestResultInDatabase()
+    {
+        //Assert
+        var memoryCache = Mock.Of<IMemoryCache>();
+        var memoryCasheMock = Mock.Get(memoryCache);
 
-    // }
+        //Act
+        TagController tagController = new(_dataContext, memoryCasheMock.Object, httpClient: _client.Object);
+        var result = (await tagController.FetchTags()) as OkObjectResult;
 
-    // [Fact]
-    // public void FetchTags_IsSendingRequest()
-    // {
+        //Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, _dataContext.Tags.Count());
+    }
 
-    // }
+    [Fact]
+    public async Task GetTags_CallingFetchWhenDbIsEmpty()
+    {
+        var services = new ServiceCollection();
+        services.AddMemoryCache();
+        var serviceProvider = services.BuildServiceProvider();
+
+        var memoryCache = serviceProvider.GetService<IMemoryCache>();
+        string casheKey = "NotAllTags";
+
+        //Act
+        TagController tagController = new(_dataContext, memoryCache, casheKey, _client.Object);
+        var result = (await tagController.GetTags(new GetTagsParams())).Result as OkObjectResult;
+        
+        //Assert
+        Assert.NotNull(result);
+
+        var tags = result.Value as IEnumerable<TagDto>;
+        Assert.NotNull(tags);
+        Assert.Equal(3, tags.Count());
+
+        List<TagDto> cashedValue = memoryCache.Get<IEnumerable<TagDto>>(casheKey) as List<TagDto>;
+        Assert.NotNull(cashedValue);
+        Assert.Equal(3, cashedValue.Count());
+
+        Assert.Equal(3, _dataContext.Tags.Count());
+    }
+
 }

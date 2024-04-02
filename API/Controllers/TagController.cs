@@ -20,10 +20,10 @@ public class TagController : ControllerBase
     private readonly IMemoryCache _cashe;
     private readonly string _allTagsCasheKey;
 
-    public TagController(DataContext context, IMemoryCache cashe, string allTagsCasheKey = "AllTags")
+    public TagController(DataContext context, IMemoryCache cashe, string allTagsCasheKey = "AllTags", HttpClient httpClient = null)
     {
         _context = context;
-        _httpClient = new HttpClient(new HttpClientHandler
+        _httpClient = httpClient ?? new HttpClient(new HttpClientHandler
             { 
                 AutomaticDecompression = DecompressionMethods.GZip
             });

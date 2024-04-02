@@ -1,5 +1,6 @@
 ﻿using API.Dtos;
 using API.Entities;
+using Newtonsoft.Json;
 
 namespace API.Tests;
 
@@ -62,5 +63,14 @@ public class TestDataHelper
                 Percent = 25
             }
         };
+    }
+
+    public static string GetFakeSOApiRespone(){
+        return JsonConvert.SerializeObject(new SoApiResponseDto(){
+            tags = GetFakeTagList(),
+            hasMore = false,
+            quotaMax = 300,
+            quotaRemaining = 249
+        });
     }
 }
