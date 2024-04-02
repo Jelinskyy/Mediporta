@@ -18,9 +18,9 @@ public class TagController : ControllerBase
     private readonly DataContext _context;
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cashe;
-    private readonly string allTagsCasheKey = "AllTags";
+    private readonly string _allTagsCasheKey;
 
-    public TagController(DataContext context, IMemoryCache cashe)
+    public TagController(DataContext context, IMemoryCache cashe, string allTagsCasheKey = "AllTags")
     {
         _context = context;
         _httpClient = new HttpClient(new HttpClientHandler
@@ -28,6 +28,7 @@ public class TagController : ControllerBase
                 AutomaticDecompression = DecompressionMethods.GZip
             });
         _cashe = cashe;
+        _allTagsCasheKey = allTagsCasheKey;
     }
 
     /// <summary>
@@ -36,7 +37,7 @@ public class TagController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TagDto>>>GetTags([FromQuery]GetTagsParams sortParams)
     {
-        if(!_cashe.TryGetValue(allTagsCasheKey, out IEnumerable<TagDto> tags))
+        if(!_cashe.TryGetValue(_allTagsCasheKey, out IEnumerable<TagDto> tags))
         {
             // Checking if there are tags in db
             if(_context.Tags.Count() <= 0) {
@@ -52,25 +53,22 @@ public class TagController : ControllerBase
                 // Prepareing Query
                 long sumOfTags = _context.Tags.Sum(t => (long)t.Count);
 
-                var query = from t in _context.Tags
-                    select new TagDto{
-                        Name = t.Name,
-                        HasSynonyms = t.HasSynonyms,
-                        IsMadatorOnly = t.IsMadatorOnly,
-                        IsRequired = t.IsRequired,
-                        Count = t.Count,
-                        Percent = Math.Round((double)t.Count / sumOfTags * 100, 3)
-                    };
-
                 // Executeing query
-                tags = await query.ToListAsync();
-
+                tags = await _context.Tags.Select(t => new TagDto(){
+                    Name = t.Name,
+                    HasSynonyms = t.HasSynonyms,
+                    IsMadatorOnly = t.IsMadatorOnly,
+                    IsRequired = t.IsRequired,
+                    Count = t.Count,
+                    Percent = Math.Round((double)t.Count / sumOfTags * 100, 3)
+                }).ToListAsync();
+                
                 // Updating Cashe
                 MemoryCacheEntryOptions casheEntryOptions = new MemoryCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromSeconds(45))
                     .SetAbsoluteExpiration(TimeSpan.FromSeconds(300));
                     
-                _cashe.Set(allTagsCasheKey, tags, casheEntryOptions);
+                _cashe.Set(_allTagsCasheKey, tags, casheEntryOptions);
             }
             catch
             {
@@ -142,7 +140,7 @@ public class TagController : ControllerBase
             return Problem("Database Connection failed");
         }
 
-        _cashe.Remove(allTagsCasheKey);
+        _cashe.Remove(_allTagsCasheKey);
         
         return Ok("Data fetched from "+apiUrl);
     }
