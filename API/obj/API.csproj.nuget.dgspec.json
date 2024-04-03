@@ -1,25 +1,35 @@
 {
   "format": 1,
   "restore": {
-    "/home/aleks/Desktop/Mediporta/API/API.csproj": {}
+    "C:\\Users\\aleks\\Desktop\\Mediporta\\API\\API.csproj": {}
   },
   "projects": {
-    "/home/aleks/Desktop/Mediporta/API/API.csproj": {
+    "C:\\Users\\aleks\\Desktop\\Mediporta\\API\\API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/aleks/Desktop/Mediporta/API/API.csproj",
+        "projectUniqueName": "C:\\Users\\aleks\\Desktop\\Mediporta\\API\\API.csproj",
         "projectName": "API",
-        "projectPath": "/home/aleks/Desktop/Mediporta/API/API.csproj",
-        "packagesPath": "/home/aleks/.nuget/packages/",
-        "outputPath": "/home/aleks/Desktop/Mediporta/API/obj/",
+        "projectPath": "C:\\Users\\aleks\\Desktop\\Mediporta\\API\\API.csproj",
+        "packagesPath": "C:\\Users\\aleks\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\aleks\\Desktop\\Mediporta\\API\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+          "C:\\Program Files (x86)\\Microsoft\\Xamarin\\NuGet\\",
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
         "configFilePaths": [
-          "/home/aleks/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\aleks\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Xamarin.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -32,6 +42,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -48,7 +63,7 @@
               "target": "Package",
               "version": "[8.0.3, )"
             },
-            "Microsoft.EntityFrameworkCore.Sqlite": {
+            "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
               "version": "[8.0.3, )"
             },
@@ -88,7 +103,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.103/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.203/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
