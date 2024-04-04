@@ -1,0 +1,28 @@
+version: "3.9" 
+services:
+  web_api:
+    container_name: mediporta-api-app
+    image: mediporta-api-app
+    build: 
+      context: .
+      dockerfile: ./API/Dockerfile
+    ports:
+      - "5000:5000"
+
+  sql_server:
+    image: mcr.microsoft.com/mssql/server
+    container_name: sql-server2022
+    ports:
+      - "1433:1433" 
+    environment:
+      - ACCEPT_EULA=y
+      - SA_PASSWORD=123Complex_Password
+      
+  migrations:
+    container_name: service-migrations
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      target: migrations
+    depends_on:
+      - sql_server
